@@ -17,7 +17,7 @@ type Tile struct {
 
 func (t *Tile) Init() error {
 	c := gg.NewContext(env.TileWidth, env.TileHeight)
-	c.DrawCircle(16, 16, 16)
+	c.DrawRectangle(0, 0, 32, 32)
 	if t.Id%2 == 0 {
 		c.SetColor(color.White)
 	} else {

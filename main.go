@@ -2,12 +2,13 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/hajimehoshi/ebiten"
-	"github.com/lakrizz/rltd/internal/env"
 	"github.com/lakrizz/rltd/internal/interfaces"
 	"github.com/lakrizz/rltd/internal/maps"
+	"github.com/lakrizz/rltd/pkg/generators"
 )
 
 // Game implements ebiten.Game interface.
@@ -37,10 +38,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 320, 240
+	return 800, 600
 }
 
 func main() {
+
+	foo, err := generators.GenerateMaze(16, 8, 43)
+	for _, v := range foo.Tiles {
+		fmt.Println(v)
+	}
+	panic(err)
+
 	game := &Game{}
 	game.Objects = make([]interfaces.Renderable, 0)
 	m, err := maps.GenerateMap(0)
@@ -49,7 +57,7 @@ func main() {
 	}
 	game.Objects = append(game.Objects, m)
 	// Sepcify the window size as you like. Here, a doulbed size is specified.
-	ebiten.SetWindowSize(calcwindowsize())
+	ebiten.SetWindowSize(800, 600)
 	ebiten.SetWindowTitle("Your game's title")
 	// Call ebiten.RunGame to start your game loop.
 
@@ -62,8 +70,4 @@ func main() {
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func calcwindowsize() (int, int) {
-	return env.MapWidth * env.TileWidth, env.MapHeight * env.TileHeight
 }
