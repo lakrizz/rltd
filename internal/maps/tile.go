@@ -20,15 +20,17 @@ const (
 
 type Tile struct {
 	Id      int
-	x, y    float64
+	x, y    int
 	Type    int
 	image   *ebiten.Image
 	options *ebiten.DrawImageOptions
+	gg      *gg.Context
+	Changes []func(t *Tile)
 }
 
 func (t *Tile) Init() error {
 	c := gg.NewContext(env.TileWidth, env.TileHeight)
-	c.DrawRectangle(0, 0, 32, 32)
+	c.DrawRectangle(0, 0, float64(env.TileWidth), float64(env.TileHeight))
 	switch t.Type {
 	case TILE_EMPTY:
 		c.SetColor(color.RGBA{0xAA, 0xAA, 0xAA, 0xFF})
@@ -44,6 +46,8 @@ func (t *Tile) Init() error {
 		break
 	}
 	c.Fill()
+
+	t.gg = c
 	ei, err := ebiten.NewImageFromImage(c.Image(), ebiten.FilterDefault)
 	if err != nil {
 		return err
@@ -51,12 +55,16 @@ func (t *Tile) Init() error {
 	t.image = ei
 	op := &ebiten.DrawImageOptions{}
 	t.options = op
-	tx, ty := t.options.GeoM.Apply(t.x, t.y)
+	tx, ty := t.options.GeoM.Apply(float64(t.x), float64(t.y))
 	t.options.GeoM.Translate(tx, ty)
 	return nil
 }
 
 func (t *Tile) Update(screen *ebiten.Image) {
+	for _, v := range t.Changes {
+		v(t)
+	}
+	t.Changes = t.Changes[:0]
 }
 
 func (t *Tile) Draw(screen *ebiten.Image) {

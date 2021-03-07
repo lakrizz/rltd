@@ -1,6 +1,8 @@
 package maps
 
 import (
+	"image/color"
+
 	"github.com/hajimehoshi/ebiten"
 	"github.com/lakrizz/rltd/internal/env"
 	"github.com/lakrizz/rltd/pkg/generators"
@@ -30,7 +32,7 @@ func GenerateMap(maze *generators.Maze) (*Map, error) {
 func (m *Map) GenerateTiles() error {
 	for yi, y := range m.maze.Tiles {
 		for xi, x := range y {
-			tt := &Tile{x: float64(xi * env.TileWidth), y: float64(yi * env.TileHeight), Id: yi + xi, Type: x.Type}
+			tt := &Tile{x: xi * env.TileWidth, y: yi * env.TileHeight, Id: yi + xi, Type: x.Type}
 			tt.Init()
 			m.Tiles[yi][xi] = tt
 		}
@@ -39,9 +41,28 @@ func (m *Map) GenerateTiles() error {
 }
 
 func (m *Map) Update(img *ebiten.Image) error {
-	for _, y := range m.Tiles {
-		for _, x := range y {
-			x.Update(img)
+	mx, my := ebiten.CursorPosition()
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		xx := mx / env.TileWidth
+		yy := my / env.TileHeight
+		if xx >= 0 && xx < env.MapWidth && yy >= 0 && yy < env.MapHeight {
+
+			t := m.Tiles[yy][xx]
+			if t.Type == TILE_EMPTY {
+				t.Changes = append(t.Changes, func(t *Tile) {
+					t.gg.Clear()
+					t.gg.SetColor(color.RGBA{0x00, 0xDE, 0xAD, 0xFF})
+					t.gg.Fill()
+					ei, _ := ebiten.NewImageFromImage(t.gg.Image(), ebiten.FilterDefault)
+					t.image = ei
+				})
+			}
+		}
+
+		for _, y := range m.Tiles {
+			for _, x := range y {
+				x.Update(img)
+			}
 		}
 	}
 	return nil

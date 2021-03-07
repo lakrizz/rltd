@@ -1,7 +1,7 @@
 package env
 
-var TileWidth int = 8
-var TileHeight int = 8
+var TileWidth int = 64
+var TileHeight int = 64
 
-var MapWidth int = 64
-var MapHeight int = 16
+var MapWidth int = 16
+var MapHeight int = 8
