@@ -13,8 +13,8 @@ type Map struct {
 
 func GenerateMap(seed int) (*Map, error) {
 	m := &Map{}
-	m.Width = 8
-	m.Height = 8
+	m.Width = env.MapWidth
+	m.Height = env.MapHeight
 	return m, nil
 }
 
@@ -23,8 +23,7 @@ func (m *Map) GenerateTiles() error {
 	for y := 0; y < m.Height; y++ {
 		m.Tiles[y] = make([]*Tile, m.Width)
 		for x := 0; x < m.Width; x++ {
-			tt := &Tile{x: float64(x * env.TileWidth), y: float64(y * env.TileHeight)}
-			tt.Id = y + x
+			tt := &Tile{x: float64(x * env.TileWidth), y: float64(y * env.TileHeight), Id: y + x}
 			tt.Init()
 			m.Tiles[y][x] = tt
 		}

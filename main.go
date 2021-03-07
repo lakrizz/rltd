@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/hajimehoshi/ebiten"
+	"github.com/lakrizz/rltd/internal/env"
 	"github.com/lakrizz/rltd/internal/interfaces"
 	"github.com/lakrizz/rltd/internal/maps"
 )
@@ -48,7 +49,7 @@ func main() {
 	}
 	game.Objects = append(game.Objects, m)
 	// Sepcify the window size as you like. Here, a doulbed size is specified.
-	ebiten.SetWindowSize(640, 480)
+	ebiten.SetWindowSize(calcwindowsize())
 	ebiten.SetWindowTitle("Your game's title")
 	// Call ebiten.RunGame to start your game loop.
 
@@ -61,4 +62,8 @@ func main() {
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func calcwindowsize() (int, int) {
+	return env.MapWidth * env.TileWidth, env.MapHeight * env.TileHeight
 }
