@@ -60,8 +60,7 @@ func GenerateMaze(width, height int, seed int64) *Maze {
 	mm.Directions = directions
 	mm.Width = width
 	mm.Height = height
-	mm.generateStart()
-	mm.generateEnd()
+	mm.generateStartAndEnd()
 	mm.SetTiles()
 	mm.Generate()
 
@@ -86,52 +85,18 @@ func (m *Maze) SetTiles() {
 }
 
 // @TODO: i'm totally sure that those switch cases could be optimized, code wise
-func (m *Maze) generateStart() {
-	// [0,1,2,3] = [top, bottom, left, right] corner
-	c := rand.Intn(3)
-	x, y := 0, 0
-	switch c {
-	case 0:
-		x, y = rand.Intn(m.Width-1), 0
-		break
-	case 1:
-		x, y = rand.Intn(m.Width-1), m.Height-1
-		break
-	case 2:
-		x, y = 0, rand.Intn(m.Height-1)
-		break
-	case 3:
-		x, y = m.Width-1, rand.Intn(m.Height-1)
-		break
-	}
-	m.Start = &Point{y, x}
-}
+func (m *Maze) generateStartAndEnd() {
 
-func (m *Maze) generateEnd() {
-	good := false
-	for !good {
-		// [0,1,2,3] = [top, bottom, left, right] corner
-		c := rand.Intn(3)
-		x, y := 0, 0
-		switch c {
-		case 0:
-			x, y = rand.Intn(m.Width-1), 0
-			break
-		case 1:
-			x, y = rand.Intn(m.Width-1), m.Height-1
-			break
-		case 2:
-			x, y = 0, rand.Intn(m.Height-1)
-			break
-		case 3:
-			x, y = 8, rand.Intn(m.Height-1)
-			break
-		}
-		p := &Point{y, x}
-		if !m.Start.Equal(p) {
-			m.Goal = p
-			good = true
-		}
+	c := rand.Intn(1) // 0 = start left/ goal right, 1 = vice versa
+	sx, sy := 0, rand.Intn(m.Height-1)
+	gx, gy := m.Width-1, rand.Intn(m.Height-1)
+
+	if c == 0 {
+		m.Start = &Point{sy, sx}
+		m.Goal = &Point{gy, gx}
+	} else {
+		m.Start = &Point{gy, gx}
+		m.Goal = &Point{sy, sx}
 	}
 }
 
