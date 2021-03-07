@@ -3,29 +3,36 @@ package maps
 import (
 	"github.com/hajimehoshi/ebiten"
 	"github.com/lakrizz/rltd/internal/env"
+	"github.com/lakrizz/rltd/pkg/generators"
 )
 
 type Map struct {
 	Width  int // width in number of tiles
 	Height int // height in number of tiles
 	Tiles  [][]*Tile
+	maze   *generators.Maze
 }
 
-func GenerateMap(seed int) (*Map, error) {
+func GenerateMap(maze *generators.Maze) (*Map, error) {
 	m := &Map{}
 	m.Width = env.MapWidth
 	m.Height = env.MapHeight
+	m.maze = maze
+	m.Tiles = make([][]*Tile, m.Height)
+
+	for i := 0; i < m.Height; i++ {
+		m.Tiles[i] = make([]*Tile, m.Width)
+	}
+
 	return m, nil
 }
 
 func (m *Map) GenerateTiles() error {
-	m.Tiles = make([][]*Tile, m.Height)
-	for y := 0; y < m.Height; y++ {
-		m.Tiles[y] = make([]*Tile, m.Width)
-		for x := 0; x < m.Width; x++ {
-			tt := &Tile{x: float64(x * env.TileWidth), y: float64(y * env.TileHeight), Id: y + x}
+	for yi, y := range m.maze.Tiles {
+		for xi, x := range y {
+			tt := &Tile{x: float64(xi * env.TileWidth), y: float64(yi * env.TileHeight), Id: yi + xi, Type: x.Type}
 			tt.Init()
-			m.Tiles[y][x] = tt
+			m.Tiles[yi][xi] = tt
 		}
 	}
 	return nil

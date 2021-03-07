@@ -8,9 +8,20 @@ import (
 	"github.com/lakrizz/rltd/internal/env"
 )
 
+const (
+	TILE_EMPTY = iota
+	TILE_START
+	TILE_END
+	TILE_PATH
+	TILE_OFFENSIVE
+	TILE_SUPPORT
+	TILE_DEFENSIVE
+)
+
 type Tile struct {
 	Id      int
 	x, y    float64
+	Type    int
 	image   *ebiten.Image
 	options *ebiten.DrawImageOptions
 }
@@ -18,10 +29,19 @@ type Tile struct {
 func (t *Tile) Init() error {
 	c := gg.NewContext(env.TileWidth, env.TileHeight)
 	c.DrawRectangle(0, 0, 32, 32)
-	if t.Id%2 == 0 {
-		c.SetColor(color.White)
-	} else {
-		c.SetColor(color.RGBA{0xFF, 0x00, 0x00, 0xFF})
+	switch t.Type {
+	case TILE_EMPTY:
+		c.SetColor(color.RGBA{0xAA, 0xAA, 0xAA, 0xFF})
+		break
+	case TILE_START:
+		c.SetColor(color.RGBA{0xCA, 0xFF, 0x70, 0xFF})
+		break
+	case TILE_END:
+		c.SetColor(color.RGBA{0x99, 0x32, 0xCC, 0xFF})
+		break
+	case TILE_PATH:
+		c.SetColor(color.RGBA{0xFF, 0xDE, 0xAD, 0xFF})
+		break
 	}
 	c.Fill()
 	ei, err := ebiten.NewImageFromImage(c.Image(), ebiten.FilterDefault)

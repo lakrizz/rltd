@@ -2,10 +2,12 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
+	"math/rand"
+	"time"
 
 	"github.com/hajimehoshi/ebiten"
+	"github.com/lakrizz/rltd/internal/env"
 	"github.com/lakrizz/rltd/internal/interfaces"
 	"github.com/lakrizz/rltd/internal/maps"
 	"github.com/lakrizz/rltd/pkg/generators"
@@ -42,19 +44,16 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func main() {
-
-	foo, err := generators.GenerateMaze(16, 8, 43)
-	for _, v := range foo.Tiles {
-		fmt.Println(v)
-	}
-	panic(err)
+	rand.Seed(time.Now().UnixNano())
+	maze := generators.GenerateMaze(env.MapWidth, env.MapHeight, rand.Int63())
 
 	game := &Game{}
 	game.Objects = make([]interfaces.Renderable, 0)
-	m, err := maps.GenerateMap(0)
+	m, err := maps.GenerateMap(maze)
 	if err != nil {
 		panic(err)
 	}
+
 	game.Objects = append(game.Objects, m)
 	// Sepcify the window size as you like. Here, a doulbed size is specified.
 	ebiten.SetWindowSize(800, 600)

@@ -1,8 +1,6 @@
 package generators
 
 import (
-	"errors"
-	"fmt"
 	"math/rand"
 )
 
@@ -14,33 +12,77 @@ const (
 	TILE_OFFENSIVE
 	TILE_SUPPORT
 	TILE_DEFENSIVE
+
+	Up = 1 << iota
+	Down
+	Left
+	Right
 )
 
-type Maze struct {
-	Width          int
-	Height         int
-	Tiles          [][]int
-	StartX, StartY int
-	EndX, EndY     int
+// Point on the maze
+type Point struct {
+	X, Y int
 }
 
-func GenerateMaze(width, height int, seed int64) (*Maze, error) {
+type Tile struct {
+	Type int
+}
+
+// Directions is the set of all the directions
+var Directions = []int{Up, Down, Left, Right}
+var Opposite = map[int]int{Up: Down, Down: Up, Left: Right, Right: Left}
+
+type Maze struct {
+	Width  int
+	Height int
+
+	Directions [][]int
+	Tiles      [][]*Tile
+	Start      *Point
+	Goal       *Point
+	Solved     bool
+}
+
+var (
+	dx = map[int]int{Up: -1, Down: 1, Left: 0, Right: 0}
+	dy = map[int]int{Up: 0, Down: 0, Left: -1, Right: 1}
+)
+
+func GenerateMaze(width, height int, seed int64) *Maze {
 	rand.Seed(seed)
 	mm := &Maze{}
+
+	var directions [][]int
+	for x := 0; x < height; x++ {
+		directions = append(directions, make([]int, width))
+	}
+
+	mm.Directions = directions
 	mm.Width = width
 	mm.Height = height
-	m := make([][]int, height)
-	for y := 0; y < height; y++ {
-		m[y] = make([]int, width)
-		for x := 0; x < width; x++ {
-			m[y][x] = TILE_EMPTY
-		}
-	}
-	mm.Tiles = m
 	mm.generateStart()
 	mm.generateEnd()
-	mm.generatePath()
-	return mm, nil
+	mm.SetTiles()
+	mm.Generate()
+
+	// fmt.Println(fmt.Sprintf("Directions[%v][%v]", len(mm.Directions), len(mm.Directions[0])))
+	// fmt.Println(fmt.Sprintf("Tiles[%v][%v]", len(mm.Tiles), len(mm.Tiles[0])))
+
+	mm.Solve()
+	mm.Tiles[mm.Start.X][mm.Start.Y].Type = TILE_START
+	mm.Tiles[mm.Goal.X][mm.Goal.Y].Type = TILE_END
+	return mm
+}
+
+func (m *Maze) SetTiles() {
+	m.Tiles = make([][]*Tile, m.Height)
+	for i := 0; i < m.Height; i++ {
+		m.Tiles[i] = make([]*Tile, m.Width)
+		for j := 0; j < m.Width; j++ {
+			m.Tiles[i][j] = &Tile{TILE_EMPTY}
+		}
+	}
+
 }
 
 // @TODO: i'm totally sure that those switch cases could be optimized, code wise
@@ -62,9 +104,7 @@ func (m *Maze) generateStart() {
 		x, y = m.Width-1, rand.Intn(m.Height-1)
 		break
 	}
-	m.Tiles[y][x] = TILE_START
-	m.StartX = x
-	m.StartY = y
+	m.Start = &Point{y, x}
 }
 
 func (m *Maze) generateEnd() {
@@ -87,115 +127,119 @@ func (m *Maze) generateEnd() {
 			x, y = 8, rand.Intn(m.Height-1)
 			break
 		}
-		if m.Tiles[y][x] != TILE_START {
-			m.Tiles[y][x] = TILE_END
+		p := &Point{y, x}
+		if !m.Start.Equal(p) {
+			m.Goal = p
 			good = true
 		}
 	}
 }
 
-func (m *Maze) generatePath() {
-	// now this is where the fun begins, eh? let's start the start
-	stepsX := make([]int, 0) // backtracking
-	stepsY := make([]int, 0) // backtracking
-	sx, sy := m.StartX, m.StartY
-	if sx == 0 {
-		sx++
-	} else if sx == m.Width {
-		sx--
-	}
-
-	if sy == 0 {
-		sy++
-	} else if sy == m.Height {
-		sy--
-	}
-
-	m.Tiles[sy][sx] = TILE_PATH
-
-	done := false
-
-	for !done {
-		// [0,1,2,3] = [top,bottom,left,right]
-		// stepsX = append(stepsX, sx)
-		// stepsY = append(stepsY, sy)
-		c := rand.Intn(3)
-		switch c {
-		case 0:
-			if sy > 1 && m.Tiles[sy-1][sx] != TILE_PATH { // we can go here
-				sy--
-			}
-			break
-		case 1:
-			if sy < m.Height-1 && m.Tiles[sy+1][sx] != TILE_PATH {
-				sy++
-			}
-			break
-		case 2:
-			if sx > 1 && m.Tiles[sy][sx-1] != TILE_PATH {
-				sx--
-			}
-			break
-		case 3:
-			if sx < m.Width && m.Tiles[sy][sx+1] != TILE_PATH {
-				sx++
-			}
-			break
-		}
-		if m.Tiles[sy][sx] == TILE_END {
-			done = true
-		} else if m.Tiles[sy][sx] == TILE_EMPTY && in(m.countSurrounding(sx, sy, TILE_PATH), []int{0, 1}) {
-			m.Tiles[sy][sx] = TILE_PATH
-			stepsX = append(stepsX, sx)
-			stepsY = append(stepsY, sy)
-		} else {
-			if len(stepsX) <= 0 || len(stepsY) <= 0 {
-				for _, v := range m.Tiles {
-					fmt.Println(v)
-				}
-				panic(errors.New("yeah, big mistake while finding a path"))
-			} else {
-				sx = stepsX[len(stepsX)-1]
-				sy = stepsY[len(stepsY)-1]
-				stepsX = stepsX[:len(stepsX)-1]
-				stepsY = stepsY[:len(stepsY)-1]
-			}
-		}
-	}
+// Contains judges whether the argument point is inside the maze or not
+func (maze *Maze) Contains(point *Point) bool {
+	return 0 <= point.X && point.X < maze.Height && 0 <= point.Y && point.Y < maze.Width
 }
 
-func (m *Maze) countSurrounding(x, y, tile int) int {
-	// lets find out if none of the surrounding tiles is the one given in the arguments
-	sur := 0
-	for yy := max(y-1, 0); yy <= min(y+1, m.Height-1); yy++ {
-		for xx := max(x-1, 0); xx <= min(x+1, m.Width-1); xx++ {
-			if yy != y && xx != x && m.Tiles[yy][xx] == tile {
-				sur++
-			}
+// Neighbors gathers the nearest undecided points
+func (maze *Maze) Neighbors(point *Point) (neighbors []int) {
+	for _, direction := range Directions {
+		next := point.Advance(direction)
+		if maze.Contains(next) && maze.Directions[next.X][next.Y] == 0 {
+			neighbors = append(neighbors, direction)
 		}
 	}
-	return sur
+	return neighbors
 }
 
-func in(needle int, haystack []int) bool {
-	for _, v := range haystack {
-		if needle == v {
-			return true
+// Connected judges whether the two points is connected by a path on the maze
+func (maze *Maze) Connected(point *Point, target *Point) bool {
+	dir := maze.Directions[point.X][point.Y]
+	for _, direction := range Directions {
+		if dir&direction != 0 {
+			next := point.Advance(direction)
+			if next.X == target.X && next.Y == target.Y {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
+// Next advances the maze path randomly and returns the new point
+func (maze *Maze) Next(point *Point) *Point {
+	neighbors := maze.Neighbors(point)
+	if len(neighbors) == 0 {
+		return nil
 	}
-	return b
+	direction := neighbors[rand.Int()%len(neighbors)]
+	maze.Directions[point.X][point.Y] |= direction
+	next := point.Advance(direction)
+	maze.Directions[next.X][next.Y] |= Opposite[direction]
+	return next
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
+// Generate the maze
+func (maze *Maze) Generate() {
+	point := maze.Start
+	stack := []*Point{point}
+	for len(stack) > 0 {
+		for {
+			point = maze.Next(point)
+			if point == nil {
+				break
+			}
+			stack = append(stack, point)
+		}
+		i := rand.Int() % ((len(stack) + 1) / 2)
+		point = stack[i]
+		stack = append(stack[:i], stack[i+1:]...)
 	}
-	return b
+}
+
+// Equal judges the equality of the two points
+func (point *Point) Equal(target *Point) bool {
+	return point.X == target.X && point.Y == target.Y
+}
+
+// Advance the point forward by the argument direction
+func (point *Point) Advance(direction int) *Point {
+	return &Point{point.X + dx[direction], point.Y + dy[direction]}
+}
+
+// Solve the maze
+func (maze *Maze) Solve() {
+	if maze.Solved {
+		return
+	}
+	point := maze.Start
+	stack := []*Point{point}
+	solution := []*Point{point}
+	visited := 1 << 12
+	// Repeat until we reach the goal
+	for !point.Equal(maze.Goal) {
+		maze.Directions[point.X][point.Y] |= visited
+		for _, direction := range Directions {
+			// Push the nearest points to the stack if not been visited yet
+			if maze.Directions[point.X][point.Y]&direction == direction {
+				next := point.Advance(direction)
+				if maze.Directions[next.X][next.Y]&visited == 0 {
+					stack = append(stack, next)
+				}
+			}
+		}
+		// Pop the stack
+		point = stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		// We have reached to a dead end so we pop the solution
+		for last := solution[len(solution)-1]; !maze.Connected(point, last); {
+			solution = solution[:len(solution)-1]
+			last = solution[len(solution)-1]
+		}
+		solution = append(solution, point)
+	}
+	maze.Solved = true
+
+	for _, v := range solution {
+		maze.Tiles[v.X][v.Y].Type = TILE_PATH
+	}
 }
